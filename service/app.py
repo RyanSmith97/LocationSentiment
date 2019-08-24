@@ -1,5 +1,5 @@
 #!flask/bin/python
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import tweepy
 
 # Imports the Google Cloud client library
@@ -20,20 +20,23 @@ access_token_secret = keys.readline().rstrip('\n')
 keys.close()
 
 
-@app.route('/getSentinment')
+@app.route('/getSentinment', methods=['POST'])
 def index():
     print("getting")
     # Authenticate
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
+    req = request.json
+    lat = str(req.get("lat"))
+    lng = str(req.get("lng"))
+    geocode = lat + ',' + lng + ',30km'
 
     #get tweets
     tweetlist = []
     api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
     for tweet in tweepy.Cursor(api.search, since="2019-8-20", lang="en",
-                               geocode="55.8642,-4.2518,30km", tweet_mode='extended').items(5):
+                               geocode=geocode, tweet_mode='extended').items(5):
         tweetlist.append(tweet.full_text)
-
 
     client = language.LanguageServiceClient()
 

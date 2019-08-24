@@ -62,9 +62,17 @@ export class MapContainer extends Component {
     // };
 
     onMapClick = (mapProps, map, clickEvent) => {
-      const lat= clickEvent.latLng .lat();
+      const lat= clickEvent.latLng.lat();
       const lng = clickEvent.latLng.lng();
-      fetch("/getSentinment").then(response => response.json().then(data => {
+      console.log(JSON.stringify({"lat":lat, "lng":lng}))
+      console.log(lat)
+      fetch("/getSentinment"
+        ,{
+        method: 'post',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({"lat": lat,"lng":lng})
+      }
+      ).then(response => response.json().then(data => {
         console.log(data["sentiment"])
         this.setState({
           marker: {name:data["sentiment"],
