@@ -20,8 +20,9 @@ access_token_secret = keys.readline().rstrip('\n')
 keys.close()
 
 
-@app.route('/')
+@app.route('/getSentinment')
 def index():
+    print("getting")
     # Authenticate
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
