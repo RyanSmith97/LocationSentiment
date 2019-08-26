@@ -106,7 +106,6 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -317,8 +316,3 @@ fabric.properties
 
 # End of https://www.gitignore.io/api/node,linux,flask,pycharm
 
-
-service/twitterKeys.txt
-service/gAPIKey.json
-ui/mapsKey.txt
-ui/.env
