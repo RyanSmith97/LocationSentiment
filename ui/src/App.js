@@ -1,10 +1,15 @@
 import React, { Component } from 'react';
 import { Map, GoogleApiWrapper, Marker, InfoWindow } from 'google-maps-react';
-import { Range } from 'react-range';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMeh,faSmile, faGrin, faLaugh, faLaughBeam } from "@fortawesome/free-regular-svg-icons";
+import { faFrownOpen,faFrown, faAngry, faMehRollingEyes } from "@fortawesome/free-regular-svg-icons";
+
+
 const mapStyles = {
   width: '100%',
   height: '90%'
 };
+
 
 export class MapContainer extends Component {
     constructor(props) {
@@ -16,190 +21,132 @@ export class MapContainer extends Component {
         selectedPlace: {}, 
         fields: {},
         marker: {name:"", position: {}},
-        values: [0] 
+        values: [0],
+        icon : "faMeh",
+        color: "#E5FF00"
       }
     }
 
-    
-  
+
+    // function to set appropriate icon and colour for sentiment
+    setIcon(sentiment){
+      if (sentiment > 0.2){
+          if (sentiment < 0.4){
+            this.setState({icon : faSmile, color:"#5F9F00"})
+          }else if (sentiment <0.6){
+            this.setState({icon : faGrin, color:"#3FBF00"})
+          }else if (sentiment < 0.8){
+            this.setState({icon : faLaugh, color:"#1FDF00"})
+          }else{
+            this.setState({icon : faLaughBeam, color:"#00FF00"})
+          }
+      }else if (sentiment < -0.2){
+          if (sentiment > -0.4){
+            this.setState({icon : faMehRollingEyes, color:"#9F5F00"})
+          }else if (sentiment > -0.6){
+            this.setState({icon : faFrownOpen, color:"#BF3F00"})
+          }else if (sentiment > -0.8){
+            this.setState({icon : faFrown, color:"#DF1F00"})
+          }else{
+            this.setState({icon : faAngry, color:"#FF0000"})
+          }
+      }else{
+      this.setState({icon : faMeh, color:"#7F7F00"})
+      }
+    }
+
+
+    // show info box on marker click
     onMarkerClick = (props, marker, e) => {
       this.setState({
         selectedPlace: props,
         activeMarker: marker,
         showingInfoWindow: true
       });
-      console.log("marker click")
     }
 
-    //  = (props) => {
-    //   console.log(props)
-    //   if (this.state.showingInfoWindow) {
-    //     this.setState({
-    //       showingInfoWindow: false,
-    //       activeMarker: null
-    //     })
-    //   }
-    //   console.log("map click")
-    // };
 
-    // onMapClick = (location, map) => {
-    //   onMarkerClick = (markerProps, marker, clickEvent) => {
-    //     console.log(marker.latLng)
-    //     const loc = clickEvent.location
-    //     console.log(loc)
-    //   this.setState(prev => ({
-    //     fields: {
-    //       loc
-    //     }
-    //   }));
-    //   // console.log(location.lat(), location.lng())
-    //   // fetch("/getSentinment").then(response => response.json().then(data => {
-    //   //   console.log(data)
-    //   //   this.setState({
-    //   //     selectedPlace: props,
-    //   //   })
-    //   // }))
-    // };
-
+    // when the map is clicked, make post  request to get sentiment in area clicked
     onMapClick = (mapProps, map, clickEvent) => {
       const lat= clickEvent.latLng.lat();
       const lng = clickEvent.latLng.lng();
-      console.log(JSON.stringify({"lat":lat, "lng":lng}))
-      console.log(lat)
-      fetch("/getSentinment"
-        ,{
-        method: 'post',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({"lat": lat,"lng":lng})
-      }
+      fetch("/getSentiment",
+        {
+          method: 'post',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({"lat": lat,"lng":lng})
+        }
       ).then(response => response.json().then(data => {
         console.log(data["sentiment"])
+
+        // calls function to set appropriate icon and colour
+        this.setIcon(data["sentiment"])
+        
+        // creates marker on click
         this.setState({
           marker: {name:data["sentiment"],
                     position: {lat, lng}}
         })
       }))
     }
+
+
+    // handle closing info window
     onClose = (props) => {
       this.setState({
               showingInfoWindow: false,
               activeMarker: null
             })
     }
-    markerClick = (location, map) => {
-      console.log(location.lat())
-
-    }
+  
+    
     render() {
-      
         return (
           <div>
-            <h1><Range
-                    step={0.1}
-                    min={-1}
-                    max={1}
-                    values={this.state.values}
-                    onChange={values => this.setState({ values })}
-                    renderTrack={({ props, children }) => (
-                      <div
-                        {...props}
-                        style={{
-                          ...props.style,
-                          height: '6px',
-                          width: '300px',
-                          backgroundColor: '#ccc'
-                        }}
-                      >
-                        {children}
-                      </div>
-                    )}
-                    renderThumb={({ props }) => (
-                      <div
-                        {...props}
-                        style={{
-                          ...props.style,
-                          height: '42px',
-                          width: '42px',
-                          backgroundColor: '#999'
-                        }}
-                      />
-                    )}
-                  /></h1>
-            <div>
-          <Map 
-            google={this.props.google} 
-            zoom={14} 
-            style={mapStyles}
-            initialCenter={{
-              lat: 55.8642,
-              lng: -4.2518
-            }}
-            // onClick={(t, map, c) => this.onMapClick(c.latLng, map)}
-            onClick={this.onMapClick}
-          >
 
-            {/* <Marker onClick={this.onMarkerClick}
-                    name={'Current location'} /> */}
-            {/* <Marker onClick={(t, map, c) => this.markerClick(c.latLng, map)} */}
-            <Marker onClick={this.onMarkerClick}
-                    name={this.state.marker.name}
-                    position={this.state.marker.position} />
+            <h1 style={{textAlign:"center"}}>
+                  Positivity Checker
+            </h1>
 
-            <Marker onClick={this.onMarkerClick}
-              position={this.state.fields.location} />
+          <div>
+            <Map 
+              google={this.props.google} 
+              zoom={14} 
+              style={mapStyles}
+              initialCenter={{
+                lat: 55.8642,
+                lng: -4.2518
+              }}
+              onClick={this.onMapClick}>
 
-            <InfoWindow 
-              marker={this.state.activeMarker}
-              visible={this.state.showingInfoWindow}
-              onClose={this.onClose}>
-                <div>
-                  {/* <h1>{this.state.selectedPlace.name}</h1> */}
-                  <Range
-                    step={0.1}
-                    min={0}
-                    max={100}
-                    values={this.state.values}
-                    onChange={values => this.setState({ values })}
-                    renderTrack={({ props, children }) => (
-                      <div
-                        {...props}
-                        style={{
-                          ...props.style,
-                          height: '6px',
-                          width: '300px',
-                          backgroundColor: '#ccc'
-                        }}
-                      >
-                        {children}
-                      </div>
-                    )}
-                    renderThumb={({ props }) => (
-                      <div
-                        {...props}
-                        style={{
-                          ...props.style,
-                          height: '42px',
-                          width: '42px',
-                          backgroundColor: '#999'
-                        }}
-                      />
-                    )}
-                  />
-                </div>
-            </InfoWindow>
-         </Map>
-         </div>
-         
-         <div>
-         
-       </div>
-       </div>
-    );
+              <Marker onClick={this.onMarkerClick}
+                      name={this.state.marker.name}
+                      position={this.state.marker.position} />
+
+
+              <InfoWindow style={{color:"black"}}
+                marker={this.state.activeMarker}
+                visible={this.state.showingInfoWindow}
+                onClose={this.onClose}>
+
+                  <div>
+                    <h1>People are feeling</h1>
+                    <h1 style={{textAlign:"center"}}> 
+                      <FontAwesomeIcon icon={this.state.icon} 
+                          style={{color:this.state.color}} />
+                    </h1>
+                  </div>
+              </InfoWindow>
+            
+            </Map>
+            </div>
+          </div>
+        );
   }
 }
 
 
 const MAPS_KEY = process.env.REACT_APP_MAPS_API_KEY
 export default GoogleApiWrapper({
-    apiKey: MAPS_KEY
+    apiKey: MAPS_KEY,
 })(MapContainer);

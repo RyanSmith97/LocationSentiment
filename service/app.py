@@ -5,6 +5,7 @@ import tweepy
 # Imports the Google Cloud client library
 from google.cloud import language
 from google.cloud.language import enums, types
+import re
 
 # Instantiates a client
 
@@ -20,42 +21,53 @@ access_token_secret = keys.readline().rstrip('\n')
 keys.close()
 
 
-@app.route('/getSentinment', methods=['POST'])
-def index():
-    print("getting")
-    # Authenticate
+# get cleaned list of tweets using Twitters rest API
+def getTweets(geocode):
+    tweetList = []
+
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
-    req = request.json
-    lat = str(req.get("lat"))
-    lng = str(req.get("lng"))
-    geocode = lat + ',' + lng + ',30km'
-
-    #get tweets
-    tweetlist = []
     api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+
     for tweet in tweepy.Cursor(api.search, since="2019-8-20", lang="en",
                                geocode=geocode, tweet_mode='extended').items(5):
-        tweetlist.append(tweet.full_text)
+        cleanTweet = ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)",
+                                     " ", tweet.full_text).split())
+        tweetList.append(cleanTweet.lower())
+    return getSentiment(tweetList)
+
+
+# get the sentiment of each tweet using Google's sentiment API
+def getSentiment(tweetList):
+    avgSentiment = 0
 
     client = language.LanguageServiceClient()
 
-    #analyse tweets
-    avgSentiment = 0
-    for text in tweetlist:
-        # text = u'Hello, world!'
+    for text in tweetList:
         document = types.Document(
             content=text,
             type=enums.Document.Type.PLAIN_TEXT)
 
-        # Detects the sentiment of the text
         sentiment = client.analyze_sentiment(document=document).document_sentiment
-        avgSentiment += sentiment.score
-        # print('Text: {}'.format(text))
-        # print('Sentiment: {}, {}'.format(sentiment.score, sentiment.magnitude))
 
-    #return analysed data
-    return jsonify({'tweets': tweetlist, 'sentiment': avgSentiment / len(tweetlist)})
+        avgSentiment += sentiment.score
+
+    return avgSentiment / len(tweetList)
+
+
+@app.route('/getSentiment', methods=['POST'])
+def main():
+
+    lat = str(request.json.get("lat"))
+    lng = str(request.json.get("lng"))
+
+    geocode = lat + ',' + lng + ',30km'  # format geocode string
+
+    #function call to get tweets which in turn will get sentiment
+    avgSentiment = getTweets(geocode)
+
+    # return analysed data
+    return jsonify({'sentiment': avgSentiment})
 
 
 if __name__ == '__main__':
